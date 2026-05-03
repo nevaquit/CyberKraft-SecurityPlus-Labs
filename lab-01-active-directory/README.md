@@ -8,6 +8,9 @@
 
 Nearly every enterprise runs Active Directory. The ability to stand up a domain, create users with PowerShell, and apply Group Policy Objects (GPOs) demonstrates immediate on-the-job value for sysadmin, help desk Level II, and SOC analyst roles. This lab directly maps to the Security+ exam's emphasis on identity management, least privilege, and defense-in-depth.
 
+### Cloud Architecture Integration
+In a modern cloud environment (as built in **Lab 06**), this on-premises Active Directory domain (`cyberkraft.local`) serves as the foundation for a hybrid identity model. By integrating this local AD with Azure AD (Entra ID) via Azure AD Connect, we extend our on-premises identities to the cloud, enabling Single Sign-On (SSO) and consistent RBAC across both environments.
+
 ---
 
 ## Environment

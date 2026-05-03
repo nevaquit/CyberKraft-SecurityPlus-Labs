@@ -8,6 +8,9 @@
 
 Network traffic analysis is a foundational skill for SOC analysts, network engineers, and incident responders. Wireshark is the industry-standard tool for capturing and dissecting packets. This lab demonstrates the ability to identify normal vs. malicious traffic patterns, extract Indicators of Compromise (IOCs), and apply display filters — all critical skills tested on the Security+ exam and demanded in entry-level security roles.
 
+### Cloud Architecture Integration
+In a cloud environment like Azure (detailed in **Lab 06**), traditional network taps are replaced by features like Azure Network Watcher Packet Capture. However, the fundamental skill of analyzing the resulting PCAP files in Wireshark remains identical. Understanding how traffic flows through Virtual Networks (VNets) and Network Security Groups (NSGs) is critical when investigating cloud-based incidents.
+
 ---
 
 ## Environment

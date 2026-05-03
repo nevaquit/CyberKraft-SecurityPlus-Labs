@@ -8,6 +8,9 @@
 
 ServiceNow is the leading IT Service Management (ITSM) platform, used by over 85% of Fortune 500 companies. Understanding ITSM workflows — specifically Incident Management, Change Management, and Problem Management — is essential for security professionals who must document, track, and resolve security incidents in a structured, auditable way. This lab maps directly to the Security+ exam's Incident Response and Governance domains.
 
+### Cloud Architecture Integration
+In a cloud-first architecture (**Lab 06**), ITSM platforms like ServiceNow (a SaaS solution) integrate directly with cloud infrastructure (IaaS) and security tools (like Azure Monitor or Splunk). This lab demonstrates how alerts generated from our Azure VM environment are translated into actionable, tracked incidents within a SaaS ITSM platform, ensuring that cloud security events are managed according to ITIL and NIST frameworks.
+
 ---
 
 ## Environment

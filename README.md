@@ -7,7 +7,7 @@
 
 ## Overview
 
-This repository documents five comprehensive, hands-on security labs aligned to the CompTIA Security+ SY0-701 certification exam. Each lab was performed on an Azure Virtual Machine (**HenryVM**, Resource Group: `HENRYVM_GROUP`, Location: `South Africa North`) and produces real, portfolio-grade artifacts that demonstrate hands-on competency to hiring managers.
+This repository documents six comprehensive, hands-on security labs aligned to the CompTIA Security+ SY0-701 certification exam. Each lab was performed on an Azure Virtual Machine (**HenryVM**, Resource Group: `HENRYVM_GROUP`, Location: `South Africa North`) and produces real, portfolio-grade artifacts that demonstrate hands-on competency to hiring managers.
 
 | Lab | Title | SY0-701 Domains | Status |
 |-----|-------|-----------------|--------|
@@ -16,6 +16,7 @@ This repository documents five comprehensive, hands-on security labs aligned to 
 | [Lab 03](./lab-03-splunk-siem/) | Splunk SIEM & Log Analysis | 4.1, 4.3, 2.2 | ✅ Complete |
 | [Lab 04](./lab-04-servicenow-itsm/) | ServiceNow ITSM — Incident & Change Management | 4.3, 5.3, 5.4 | ✅ Complete |
 | [Lab 05](./lab-05-nessus-vulnerability/) | Nessus Vulnerability Scanning & Remediation | 4.3, 2.5, 5.1 | ✅ Complete |
+| [Lab 06](./lab-06-azure-cloud-architecture/) | Azure Cloud Architecture & Engineering | 2.1, 3.2, 4.6 | ✅ Complete |
 
 ---
 
@@ -42,6 +43,7 @@ Azure Cloud (South Africa North)
     ├── Splunk Enterprise + Universal Forwarder (Lab 03)
     ├── ServiceNow PDI (Lab 04 — browser-based)
     └── Nessus Essentials (Lab 05)
+    └── Azure Cloud Architecture (Lab 06)
 ```
 
 ---

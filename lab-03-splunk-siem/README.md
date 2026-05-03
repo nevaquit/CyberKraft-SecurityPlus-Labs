@@ -8,6 +8,9 @@
 
 Splunk is the most widely deployed SIEM platform in enterprise environments. Proficiency with Splunk's Search Processing Language (SPL), dashboard creation, and alert configuration is one of the most in-demand skills for SOC Analyst, Tier 1/2 positions. This lab demonstrates end-to-end SIEM operations: ingesting logs, writing detection queries, building dashboards, and responding to alerts.
 
+### Cloud Architecture Integration
+In our Azure cloud architecture (**Lab 06**), Splunk acts as the centralized logging and monitoring hub. By deploying Splunk on an Azure VM and configuring Network Security Groups (NSGs) to allow ingestion traffic (Port 9997) while restricting web access (Port 8000) to trusted IPs, we apply cloud engineering principles of microsegmentation and centralized visibility. Splunk can also be integrated with Azure Monitor and Azure AD logs for comprehensive cloud posture visibility.
+
 ---
 
 ## Environment
