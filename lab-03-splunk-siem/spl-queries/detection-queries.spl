@@ -1,0 +1,196 @@
+## ============================================================
+## CyberKraft Security+ Lab 03 — Splunk SIEM
+## File: detection-queries.spl
+## Purpose: SPL detection query library
+## Author: Henry Jenkins | CyberKraft Training
+## Azure VM: HenryVM (South Africa North)
+## SY0-701 Domain: 4.1 Monitoring & Detection
+## ============================================================
+
+## ---- AUTHENTICATION EVENTS ----
+
+## Q01: Failed Login Attempts (Brute Force)
+## Detects accounts with 5+ failed logins in any time window
+index=windows EventCode=4625
+| stats count by TargetUserName, IpAddress, WorkstationName
+| where count >= 5
+| sort -count
+| rename count as "Failed_Attempts", TargetUserName as "Target_User", IpAddress as "Source_IP"
+
+## Q02: Successful Login After Multiple Failures (Credential Stuffing)
+index=windows EventCode=4625
+| stats count as failures by TargetUserName, IpAddress
+| where failures >= 5
+| join type=inner TargetUserName [
+    search index=windows EventCode=4624
+    | stats count as successes by TargetUserName, IpAddress
+]
+| table TargetUserName, IpAddress, failures, successes
+| where successes >= 1
+
+## Q03: Account Lockouts
+index=windows EventCode=4740
+| table _time, TargetUserName, SubjectUserName, CallerComputerName
+| sort -_time
+
+## Q04: Logon Type Analysis
+## Logon Type 3=Network, 10=RemoteInteractive, 2=Interactive
+index=windows EventCode=4624
+| eval LogonTypeDesc=case(
+    Logon_Type=2, "Interactive",
+    Logon_Type=3, "Network",
+    Logon_Type=4, "Batch",
+    Logon_Type=5, "Service",
+    Logon_Type=7, "Unlock",
+    Logon_Type=8, "NetworkCleartext",
+    Logon_Type=9, "NewCredentials",
+    Logon_Type=10, "RemoteInteractive",
+    Logon_Type=11, "CachedInteractive",
+    true(), "Unknown"
+)
+| stats count by LogonTypeDesc, TargetUserName
+| sort -count
+
+## Q05: Off-Hours Logins (Outside 8am-6pm weekdays)
+index=windows EventCode=4624
+| eval hour=strftime(_time, "%H")
+| eval dayofweek=strftime(_time, "%w")
+| where (hour < 8 OR hour > 18) OR (dayofweek=0 OR dayofweek=6)
+| table _time, TargetUserName, IpAddress, LogonType, host
+| sort -_time
+
+## ---- ACCOUNT MANAGEMENT ----
+
+## Q06: New User Account Created
+index=windows EventCode=4720
+| table _time, SubjectUserName, TargetUserName, host
+| sort -_time
+
+## Q07: User Account Deleted
+index=windows EventCode=4726
+| table _time, SubjectUserName, TargetUserName, host
+| sort -_time
+
+## Q08: User Added to Privileged Group
+index=windows (EventCode=4728 OR EventCode=4732 OR EventCode=4756)
+| eval GroupChange=case(
+    EventCode=4728, "Global Group",
+    EventCode=4732, "Local Group",
+    EventCode=4756, "Universal Group"
+)
+| table _time, SubjectUserName, MemberName, TargetUserName, GroupChange, host
+| sort -_time
+
+## Q09: Password Reset Events
+index=windows EventCode=4723 OR EventCode=4724
+| eval PasswordEvent=case(
+    EventCode=4723, "User Changed Own Password",
+    EventCode=4724, "Admin Reset Password"
+)
+| table _time, SubjectUserName, TargetUserName, PasswordEvent, host
+| sort -_time
+
+## ---- PROCESS EXECUTION ----
+
+## Q10: Suspicious Process Creation (Sysmon)
+index=sysmon EventCode=1
+| where (ParentImage LIKE "%cmd.exe%" OR ParentImage LIKE "%powershell.exe%" OR ParentImage LIKE "%wscript.exe%")
+    AND (Image LIKE "%net.exe%" OR Image LIKE "%whoami.exe%" OR Image LIKE "%ipconfig.exe%"
+         OR Image LIKE "%tasklist.exe%" OR Image LIKE "%systeminfo.exe%" OR Image LIKE "%netstat.exe%")
+| table _time, host, User, Image, CommandLine, ParentImage, ParentCommandLine
+| sort -_time
+
+## Q11: PowerShell Script Block Logging
+index=windows source="WinEventLog:Microsoft-Windows-PowerShell/Operational" EventCode=4104
+| eval ScriptLength=len(ScriptBlockText)
+| where ScriptLength > 200
+| eval IsSuspicious=if(
+    match(ScriptBlockText, "(?i)(invoke-expression|iex|downloadstring|webclient|bypass|hidden|encoded|base64)"),
+    "YES", "NO"
+)
+| table _time, host, User, IsSuspicious, ScriptBlockText
+| sort -_time
+
+## Q12: Encoded PowerShell Commands
+index=windows source="WinEventLog:Microsoft-Windows-PowerShell/Operational" EventCode=4104
+| where match(ScriptBlockText, "(?i)(encodedcommand|-enc |-e )")
+| table _time, host, User, ScriptBlockText
+| sort -_time
+
+## Q13: Living Off the Land Binaries (LOLBins)
+index=sysmon EventCode=1
+| where Image LIKE "%certutil.exe%" OR Image LIKE "%mshta.exe%" OR Image LIKE "%regsvr32.exe%"
+    OR Image LIKE "%rundll32.exe%" OR Image LIKE "%wmic.exe%" OR Image LIKE "%bitsadmin.exe%"
+    OR Image LIKE "%msiexec.exe%" OR Image LIKE "%cscript.exe%" OR Image LIKE "%wscript.exe%"
+| table _time, host, User, Image, CommandLine, ParentImage
+| sort -_time
+
+## ---- NETWORK CONNECTIONS ----
+
+## Q14: Network Connections to Unusual Ports (Sysmon)
+index=sysmon EventCode=3
+| where NOT (DestinationPort=80 OR DestinationPort=443 OR DestinationPort=53
+    OR DestinationPort=389 OR DestinationPort=636 OR DestinationPort=88
+    OR DestinationPort=445 OR DestinationPort=3389 OR DestinationPort=135)
+| stats count by DestinationIp, DestinationPort, Image, host
+| where count >= 3
+| sort -count
+
+## Q15: DNS Queries to Suspicious Domains
+index=sysmon EventCode=22
+| where QueryName LIKE "%.ru%" OR QueryName LIKE "%.cn%" OR QueryName LIKE "%.tk%"
+    OR QueryName LIKE "%.xyz%" OR QueryName LIKE "%.top%"
+| table _time, host, User, QueryName, QueryResults, Image
+| sort -_time
+
+## ---- FILE SYSTEM ----
+
+## Q16: File Creation in Sensitive Directories (Sysmon)
+index=sysmon EventCode=11
+| where TargetFilename LIKE "%\\System32\\%" OR TargetFilename LIKE "%\\Startup\\%"
+    OR TargetFilename LIKE "%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\%"
+| table _time, host, User, TargetFilename, Image
+| sort -_time
+
+## Q17: Registry Persistence (Sysmon)
+index=sysmon EventCode=13
+| where TargetObject LIKE "%\\Run\\%" OR TargetObject LIKE "%\\RunOnce\\%"
+    OR TargetObject LIKE "%\\Services\\%"
+| table _time, host, User, TargetObject, Details, Image
+| sort -_time
+
+## ---- SCHEDULED TASKS ----
+
+## Q18: Scheduled Task Creation
+index=windows EventCode=4698
+| table _time, SubjectUserName, TaskName, TaskContent, host
+| sort -_time
+
+## ---- DASHBOARD QUERIES ----
+
+## Q19: Security Event Volume Over Time (for timechart panel)
+index=windows (EventCode=4624 OR EventCode=4625 OR EventCode=4720 OR EventCode=4740)
+| eval EventDesc=case(
+    EventCode=4624, "Successful Logon",
+    EventCode=4625, "Failed Logon",
+    EventCode=4720, "Account Created",
+    EventCode=4740, "Account Locked"
+)
+| timechart span=1h count by EventDesc
+
+## Q20: Top 10 Source IPs for Failed Logins
+index=windows EventCode=4625
+| stats count as failed_logins by IpAddress
+| sort -failed_logins
+| head 10
+| rename IpAddress as "Source IP", failed_logins as "Failed Logins"
+
+## Q21: Security Event Summary (Single Value Panels)
+index=windows earliest=-24h
+| stats
+    count(eval(EventCode=4624)) as successful_logins,
+    count(eval(EventCode=4625)) as failed_logins,
+    count(eval(EventCode=4720)) as accounts_created,
+    count(eval(EventCode=4740)) as accounts_locked,
+    count(eval(EventCode=4728 OR EventCode=4732)) as group_changes
+| transpose

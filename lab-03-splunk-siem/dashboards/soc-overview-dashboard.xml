@@ -1,0 +1,249 @@
+<dashboard version="1.1" theme="dark">
+  <label>CyberKraft SOC Overview</label>
+  <description>Security Operations Center Dashboard — CyberKraft Lab 03 | HenryVM (Azure, South Africa North)</description>
+
+  <!-- ============================================================
+       ROW 1: Single Value Summary Panels
+       ============================================================ -->
+  <row>
+    <panel>
+      <title>Failed Logins (Last 24h)</title>
+      <single>
+        <search>
+          <query>index=windows EventCode=4625 earliest=-24h | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10,50]</option>
+        <option name="underLabel">Event ID 4625</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Successful Logins (Last 24h)</title>
+      <single>
+        <search>
+          <query>index=windows EventCode=4624 earliest=-24h | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="underLabel">Event ID 4624</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Account Lockouts (Last 24h)</title>
+      <single>
+        <search>
+          <query>index=windows EventCode=4740 earliest=-24h | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="underLabel">Event ID 4740</option>
+      </single>
+    </panel>
+    <panel>
+      <title>New Accounts Created (Last 24h)</title>
+      <single>
+        <search>
+          <query>index=windows EventCode=4720 earliest=-24h | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="underLabel">Event ID 4720</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Privilege Escalations (Last 24h)</title>
+      <single>
+        <search>
+          <query>index=windows (EventCode=4728 OR EventCode=4732 OR EventCode=4756) earliest=-24h | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="underLabel">Group Changes</option>
+      </single>
+    </panel>
+  </row>
+
+  <!-- ============================================================
+       ROW 2: Authentication Trend + Top Failed Users
+       ============================================================ -->
+  <row>
+    <panel>
+      <title>Authentication Events Over Time (Last 24h)</title>
+      <chart>
+        <search>
+          <query>
+            index=windows (EventCode=4624 OR EventCode=4625 OR EventCode=4740)
+            | eval EventDesc=case(
+                EventCode=4624, "Successful Logon",
+                EventCode=4625, "Failed Logon",
+                EventCode=4740, "Account Lockout"
+              )
+            | timechart span=1h count by EventDesc
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Top 10 Users with Failed Logins</title>
+      <chart>
+        <search>
+          <query>
+            index=windows EventCode=4625
+            | stats count by TargetUserName
+            | sort -count
+            | head 10
+            | rename TargetUserName as "Username", count as "Failed Attempts"
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.orientation">horizontal</option>
+      </chart>
+    </panel>
+  </row>
+
+  <!-- ============================================================
+       ROW 3: Brute Force Detection + Source IPs
+       ============================================================ -->
+  <row>
+    <panel>
+      <title>Brute Force Candidates (5+ Failed Logins)</title>
+      <table>
+        <search>
+          <query>
+            index=windows EventCode=4625
+            | stats count as Failed_Attempts,
+                    values(IpAddress) as Source_IPs,
+                    latest(_time) as Last_Attempt
+              by TargetUserName
+            | where Failed_Attempts >= 5
+            | sort -Failed_Attempts
+            | convert ctime(Last_Attempt)
+            | rename TargetUserName as "Target User"
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Top Source IPs — Failed Logins</title>
+      <chart>
+        <search>
+          <query>
+            index=windows EventCode=4625
+            | stats count by IpAddress
+            | sort -count
+            | head 10
+            | rename IpAddress as "Source IP", count as "Failed Logins"
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+      </chart>
+    </panel>
+  </row>
+
+  <!-- ============================================================
+       ROW 4: Account Management Events
+       ============================================================ -->
+  <row>
+    <panel>
+      <title>Recent Account Management Events</title>
+      <table>
+        <search>
+          <query>
+            index=windows (EventCode=4720 OR EventCode=4726 OR EventCode=4728 OR EventCode=4732 OR EventCode=4740)
+            | eval EventDesc=case(
+                EventCode=4720, "Account Created",
+                EventCode=4726, "Account Deleted",
+                EventCode=4728, "Added to Global Group",
+                EventCode=4732, "Added to Local Group",
+                EventCode=4740, "Account Locked Out"
+              )
+            | table _time, EventDesc, SubjectUserName, TargetUserName, host
+            | sort -_time
+            | head 20
+          </query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="rowNumbers">true</option>
+      </table>
+    </panel>
+  </row>
+
+  <!-- ============================================================
+       ROW 5: PowerShell + Sysmon
+       ============================================================ -->
+  <row>
+    <panel>
+      <title>Suspicious PowerShell Executions</title>
+      <table>
+        <search>
+          <query>
+            index=windows source="WinEventLog:Microsoft-Windows-PowerShell/Operational" EventCode=4104
+            | eval IsSuspicious=if(
+                match(ScriptBlockText, "(?i)(invoke-expression|iex|downloadstring|webclient|bypass|hidden|encoded|base64|mimikatz|invoke-mimikatz)"),
+                "⚠️ YES", "NO"
+              )
+            | where IsSuspicious="⚠️ YES"
+            | table _time, host, UserName, IsSuspicious, ScriptBlockText
+            | sort -_time
+            | head 10
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+      </table>
+    </panel>
+    <panel>
+      <title>Suspicious Process Creations (Sysmon)</title>
+      <table>
+        <search>
+          <query>
+            index=sysmon EventCode=1
+            | where (ParentImage LIKE "%cmd.exe%" OR ParentImage LIKE "%powershell.exe%")
+                AND (Image LIKE "%net.exe%" OR Image LIKE "%whoami.exe%" OR Image LIKE "%ipconfig.exe%"
+                     OR Image LIKE "%tasklist.exe%" OR Image LIKE "%systeminfo.exe%")
+            | table _time, host, User, Image, CommandLine, ParentImage
+            | sort -_time
+            | head 10
+          </query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+</dashboard>

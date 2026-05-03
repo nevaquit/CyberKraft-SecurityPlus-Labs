@@ -1,0 +1,40 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Sensitive files — never commit credentials
+*.password
+*.secret
+*.key
+*.pem
+*.pfx
+*.p12
+
+# Temporary files
+*.tmp
+*.temp
+Temp/
+temp/
+
+# Large capture files (store separately)
+*.pcap
+*.pcapng
+*.cap
+
+# Windows log files
+*.evtx
+
+# Nessus scan files (may contain sensitive data)
+*.nessus
+
+# Splunk indexes (large binary files)
+*.db
+*.tsidx
